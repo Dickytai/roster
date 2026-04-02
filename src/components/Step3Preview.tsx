@@ -1,15 +1,17 @@
 import { useState } from 'react';
-import { OnCallSchedule } from '../lib/types';
+import { OnCallSchedule, YearlyRoster, StaffStatistics } from '../lib/types';
 import { parseISO } from 'date-fns';
 import { generatePdf } from '../lib/pdfGenerator';
 
 interface Step3PreviewProps {
-  schedule: OnCallSchedule;
+  schedule: OnCallSchedule & { entries: any[]; phWeekendsCount: Record<string, number> };
+  roster: YearlyRoster;
+  statistics: StaffStatistics[];
   onBack: () => void;
   onReset: () => void;
 }
 
-export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
+export function Step3Preview({ schedule, roster, statistics, onBack, onReset }: Step3PreviewProps) {
   const [downloading, setDownloading] = useState<'excel' | 'pdf' | null>(null);
 
   const handleDownloadExcel = async () => {
@@ -18,7 +20,7 @@ export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
       const response = await fetch('/api/download/excel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schedule }),
+        body: JSON.stringify({ schedule, roster, statistics }),
       });
       if (!response.ok) throw new Error('Download failed');
       const blob = await response.blob();
@@ -73,7 +75,7 @@ export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
         </div>
         <div className="bg-gray-50 rounded-lg p-4 text-center">
           <div className="text-2xl font-semibold text-primary">{schedule.entries.length}</div>
-          <div className="text-xs text-gray-500">Total Days</div>
+          <div className="text-xs text-gray-500">On-Call Entries</div>
         </div>
       </div>
 
@@ -108,7 +110,7 @@ export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
             return (
               <div key={month} className="bg-gray-50 rounded p-2 text-xs">
                 <div className="font-medium text-gray-700">{monthNames[month - 1]}</div>
-                <div className="text-gray-500">{monthEntries.length} days</div>
+                <div className="text-gray-500">{monthEntries.length} entries</div>
               </div>
             );
           })}

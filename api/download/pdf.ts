@@ -3,12 +3,22 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import pdfMake from 'pdfmake/build/pdfmake';
 // @ts-ignore
 import pdfFonts from 'pdfmake/build/vfs_fonts';
+import { format, parseISO } from 'date-fns';
+
+interface FlatEntry {
+  date: string;
+  dayOfWeek: number;
+  isPublicHoliday: boolean;
+  phName?: string;
+  onCallStaffId: string | null;
+  onCallStaffName: string | null;
+}
 
 interface OnCallSchedule {
   year: number;
   publicHolidays: { date: string; name: string; dayOfWeek: number }[];
-  staff: { id: string; name: string; annualLeaves: { startDate: string; endDate: string }[] }[];
-  entries: { date: string; dayOfWeek: number; isPublicHoliday: boolean; phName?: string; onCallStaffId: string | null; onCallStaffName: string | null }[];
+  staff: { id: string; name: string; shortName: string }[];
+  entries: FlatEntry[];
   phWeekendsCount: Record<string, number>;
 }
 
@@ -27,16 +37,11 @@ function getMonthName(month: number): string {
   return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][month - 1];
 }
 
-function parseISO(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
 function generatePdfContent(schedule: OnCallSchedule): any {
   const { year, publicHolidays, staff, entries, phWeekendsCount } = schedule;
 
   // Group entries by month
-  const monthlyData: Record<number, typeof entries> = {};
+  const monthlyData: Record<number, FlatEntry[]> = {};
   for (let m = 1; m <= 12; m++) {
     monthlyData[m] = entries.filter(e => {
       const d = parseISO(e.date);

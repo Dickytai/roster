@@ -47,6 +47,8 @@ function App() {
         return (
           <Step3Preview
             schedule={store.state.onCallSchedule!}
+            roster={store.state.roster!}
+            statistics={store.state.statistics!}
             onBack={() => {
               setActiveStep(2);
             }}

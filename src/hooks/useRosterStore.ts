@@ -1,18 +1,25 @@
 import { useState, useCallback } from 'react';
-import { GenerationState, Staff, PublicHoliday } from '../lib/types';
+import { GenerationState, Staff, PublicHoliday, YearlyRoster, StaffStatistics } from '../lib/types';
 import { hongKong2026Holidays } from '../lib/holidays';
-import { generateOnCallSchedule } from '../lib/rosterAlgorithm';
+import { generateOnCallSchedule, generateYearlyRoster, calculateStatistics } from '../lib/rosterAlgorithm';
 
-const initialState: GenerationState = {
+interface FullGenerationState extends GenerationState {
+  roster: YearlyRoster | null;
+  statistics: StaffStatistics[] | null;
+}
+
+const initialState: FullGenerationState = {
   step: 1,
   year: 2026,
   publicHolidays: hongKong2026Holidays,
   staff: [],
   onCallSchedule: null,
+  roster: null,
+  statistics: null,
 };
 
 export function useRosterStore() {
-  const [state, setState] = useState<GenerationState>(initialState);
+  const [state, setState] = useState<FullGenerationState>(initialState);
 
   const setYear = useCallback((year: number) => {
     setState(s => ({ ...s, year }));
@@ -43,9 +50,11 @@ export function useRosterStore() {
   }, []);
 
   const generate = useCallback(() => {
-    const schedule = generateOnCallSchedule(state.year, state.staff);
-    setState(s => ({ ...s, onCallSchedule: schedule, step: 3 }));
-  }, [state.year, state.staff]);
+    const onCallSchedule = generateOnCallSchedule(state.year, state.publicHolidays, state.staff);
+    const roster = generateYearlyRoster(onCallSchedule);
+    const statistics = calculateStatistics(onCallSchedule, roster);
+    setState(s => ({ ...s, onCallSchedule, roster, statistics, step: 3 }));
+  }, [state.year, state.publicHolidays, state.staff]);
 
   const reset = useCallback(() => {
     setState(initialState);

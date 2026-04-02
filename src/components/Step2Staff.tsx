@@ -20,6 +20,9 @@ export function Step2Staff({ staff, onAddStaff, onRemoveStaff, onBack, onNext }:
     const newStaff: Staff = {
       id: `staff-${Date.now()}`,
       name: name.trim(),
+      shortName: name.trim().split(',')[1]?.trim() || name.trim(),
+      position: 'RN',
+      canOnCall: true,
       annualLeaves: [],
     };
 

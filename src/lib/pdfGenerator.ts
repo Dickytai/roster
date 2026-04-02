@@ -1,8 +1,27 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { OnCallSchedule } from './types';
+import { parseISO } from 'date-fns';
 
-export function generatePdf(schedule: OnCallSchedule): void {
+interface FlatEntry {
+  date: string;
+  dayOfWeek: number;
+  isPublicHoliday: boolean;
+  phName?: string;
+  onCallStaffId: string | null;
+  onCallStaffName: string | null;
+}
+
+interface OnCallSchedule {
+  year: number;
+  publicHolidays: { date: string; name: string; dayOfWeek: number }[];
+  staff: { id: string; name: string; shortName: string }[];
+  entries: FlatEntry[];
+  phWeekendsCount: Record<string, number>;
+}
+
+export function generatePdf(
+  schedule: OnCallSchedule & { entries: FlatEntry[]; phWeekendsCount: Record<string, number> }
+): void {
   const doc = new jsPDF();
   const { year, publicHolidays, staff, entries, phWeekendsCount } = schedule;
 
@@ -36,7 +55,7 @@ export function generatePdf(schedule: OnCallSchedule): void {
 
   for (let month = 1; month <= 12; month++) {
     const monthEntries = entries.filter(e => {
-      const date = new Date(e.date);
+      const date = parseISO(e.date);
       return date.getMonth() + 1 === month;
     });
 
