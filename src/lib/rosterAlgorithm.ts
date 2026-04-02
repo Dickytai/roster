@@ -389,6 +389,28 @@ function assignOnCallToWeeks(
 // Shift Code Calculation
 // ============================================
 
+// Excel week counter formula: IF(WEEKDAY(date,2)=6, INT((date - Jan 1)/7) + 1, 0)
+// This only has non-zero values for Saturdays
+function getExcelWeekCounter(date: string): number {
+  const jan1 = new Date(date.substring(0, 4) + '-01-01');
+  const d = new Date(date);
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  if (dayOfWeek !== 6) return 0; // Only Saturdays have non-zero counter
+  const diffDays = Math.floor((d.getTime() - jan1.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7) + 1;
+}
+
+// Check if staff is in the RN on-call group for this date
+function isInRnGroup(
+  staffId: string,
+  dayData: OnCallDay | undefined
+): boolean {
+  if (!dayData) return false;
+  // RN group is rows 5-7 in Master sheet - the first 3 onCallStaffIds
+  const rnGroupIds = dayData.onCallStaffIds.slice(0, 3);
+  return rnGroupIds.includes(staffId);
+}
+
 export function calculateShiftCode(
   staffId: string,
   staffName: string,
@@ -398,92 +420,88 @@ export function calculateShiftCode(
   isPublicHoliday: boolean,
   onCallSchedule: OnCallSchedule
 ): ShiftCode {
-  const { dateToOnCall, staff } = onCallSchedule;
+  const { dateToOnCall } = onCallSchedule;
   const dayData = dateToOnCall.get(date);
-  const isOnCall = dayData?.onCallStaffIds.includes(staffId) || false;
+  const isInRn = isInRnGroup(staffId, dayData);
 
-  const staffMember = staff.find(s => s.id === staffId);
-  const isOnAl = staffMember ? isDateInAl(date, staffMember.annualLeaves) : false;
+  // Excel week counter (only non-zero for Saturdays)
+  const excelWeekCounter = getExcelWeekCounter(date);
+  const isOddWeek = excelWeekCounter % 2 === 1;
+  const isEvenWeek = excelWeekCounter % 2 === 0;
 
-  // Find which week this date belongs to and get week number
-  let weekNumber = 0;
-  for (const week of onCallSchedule.weeks) {
-    if (date >= week.startDate && date <= week.endDate) {
-      weekNumber = week.weekNumber;
-      break;
-    }
-  }
-
-  // PH Day logic
+  // PH Day logic (Priority 1)
   if (isPublicHoliday) {
-    if (isOnAl) {
-      return 'HDAL'; // On AL during PH
+    // HDAL: On AL during PH + (is Saturday OR is in HDAL名单)
+    const hdolList = ['Chan, Man Wai', 'Ng Suet Ping, Yoko', 'Li Mui Ying', 'Lee Ka Po, Kathy', 'Huang Huanrao, Yoyo'];
+    if (hdolList.includes(staffName) && dayOfWeek === 6) {
+      return 'HDAL';
     }
-    if (dayOfWeek === 0) { // Sunday
-      return 'DO';
+    if (dayOfWeek === 0) return 'DO'; // Sunday PH
+    if (dayOfWeek === 6) { // Saturday PH
+      if (STAFF_WITH_HD_ON_SAT.includes(staffName)) return 'HD';
+      if (staffName === 'Li Mui Ying') return 'HD1';
     }
-    if (dayOfWeek === 6) { // Saturday
-      if (STAFF_WITH_HD_ON_SAT.includes(staffName)) {
-        return 'HD';
-      }
-    }
-    // Staff is on PH - they work
-    return 'PH';
+    return 'PH'; // Staff works PH
   }
 
-  // AL Day
-  if (isOnAl) {
-    return 'AL';
-  }
+  // AL Day (Priority 2)
+  // Check if staff is on AL (handled by isOnAl in caller)
+  // Note: AL check is done before this function is called in generateYearlyRoster
 
-  // Sunday logic
+  // Sunday logic (Priority 3) - ALL staff get DO
   if (dayOfWeek === 0) {
     return 'DO';
   }
 
-  // Saturday logic
+  // Saturday logic (Priority 4)
   if (dayOfWeek === 6) {
+    // HDAL名单 on Saturday = HDAL
+    const hdolList = ['Chan, Man Wai', 'Ng Suet Ping, Yoko', 'Li Mui Ying', 'Lee Ka Po, Kathy', 'Huang Huanrao, Yoyo'];
+    if (hdolList.includes(staffName)) {
+      return 'HDAL';
+    }
+
+    // Saturday HD for specific staff
     if (STAFF_WITH_HD_ON_SAT.includes(staffName)) {
       return 'HD';
     }
     if (staffName === 'Li Mui Ying') {
       return 'HD1';
     }
-    if (isOnCall) {
-      // Yoyo, Kathy, Ivy patterns
-      if (staffName === 'Huang Huanrao, Yoyo') {
-        return weekNumber % 2 === 1 ? 'HD2' : 'B6';
-      }
-      if (staffName === 'Lee Ka Po, Kathy') {
-        return weekNumber % 2 === 0 ? 'HD2' : 'B6';
-      }
-      if (staffName === 'Fan Hoi Wan, Ivy') {
-        return weekNumber % 2 === 0 ? 'D' : 'DO';
-      }
-      return 'D';
-    }
-    return 'DO';
-  }
 
-  // Weekday logic
-  if (isOnCall) {
-    // Yoyo, Kathy patterns for weekdays
+    // Yoyo, Kathy, Ivy patterns based on RN group and week parity
     if (staffName === 'Huang Huanrao, Yoyo') {
-      return weekNumber % 2 === 1 ? 'D1' : 'B6';
+      if (isOddWeek) return 'HD2';
+      // Even week: if in RN group, D; else DO
+      return isInRn ? 'D' : 'DO';
     }
     if (staffName === 'Lee Ka Po, Kathy') {
-      return weekNumber % 2 === 0 ? 'D1' : 'B6';
+      if (isEvenWeek) return 'HD2';
+      // Odd week: if in RN group, D; else DO
+      return isInRn ? 'D' : 'DO';
     }
-    // Others get E if on-call, D otherwise
-    return 'D';
-  }
+    if (staffName === 'Fan Hoi Wan, Ivy') {
+      // Ivy: if in RN group, D; else DO (regardless of week parity in template)
+      return isInRn ? 'D' : 'DO';
+    }
 
-  // Not on-call on weekday
-  if (staffName === 'Fan Hoi Wan, Ivy') {
+    // Other RN group staff on Saturday: D if in group, DO otherwise
+    if (isInRn) return 'D';
     return 'DO';
   }
 
-  return 'DO';
+  // Monday-Friday logic (Priority 5)
+  // Yoyo, Kathy patterns based on week parity
+  if (staffName === 'Huang Huanrao, Yoyo') {
+    return isOddWeek ? 'D1' : 'B6';
+  }
+  if (staffName === 'Lee Ka Po, Kathy') {
+    return isEvenWeek ? 'D1' : 'B6';
+  }
+
+  // Weekday: if on-call in RN group, D; else E
+  if (isInRn) return 'D';
+  return 'E';
 }
 
 // ============================================
@@ -505,15 +523,20 @@ export function generateYearlyRoster(onCallSchedule: OnCallSchedule): YearlyRost
 
       for (const week of monthWeeks) {
         for (const day of week.days) {
-          const shiftCode = calculateShiftCode(
-            s.id,
-            s.name,
-            s.position,
-            day.date,
-            day.dayOfWeek,
-            day.isPublicHoliday,
-            onCallSchedule
-          );
+          // Check AL first - if on AL, skip shift code calculation
+          const isOnAl = isDateInAl(day.date, s.annualLeaves);
+
+          const shiftCode = isOnAl
+            ? 'AL'
+            : calculateShiftCode(
+                s.id,
+                s.name,
+                s.position,
+                day.date,
+                day.dayOfWeek,
+                day.isPublicHoliday,
+                onCallSchedule
+              );
 
           entries.push({
             date: day.date,
