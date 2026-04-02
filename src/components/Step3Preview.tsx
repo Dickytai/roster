@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { OnCallSchedule } from '../lib/types';
-import { format, parseISO, getMonth } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { generateExcel } from '../lib/excelGenerator';
 
 interface Step3PreviewProps {

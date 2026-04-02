@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { OnCallSchedule, RosterEntry, Staff } from './types';
-import { format, parseISO, getMonth } from 'date-fns';
+import { OnCallSchedule } from './types';
+import { format, parseISO } from 'date-fns';
 
 export function generateExcel(schedule: OnCallSchedule): ArrayBuffer {
   const workbook = XLSX.utils.book_new();

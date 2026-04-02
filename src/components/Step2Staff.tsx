@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Staff, AnnualLeave } from '../lib/types';
+import { Staff } from '../lib/types';
 
 interface Step2StaffProps {
   staff: Staff[];
@@ -34,14 +34,6 @@ export function Step2Staff({ staff, onAddStaff, onRemoveStaff, onBack, onNext }:
     setName('');
     setAlStart('');
     setAlEnd('');
-  };
-
-  const addLeaveToStaff = (staffId: string, start: string, end: string) => {
-    const s = staff.find(st => st.id === staffId);
-    if (!s) return;
-
-    s.annualLeaves.push({ startDate: start, endDate: end });
-    onAddStaff({ ...s }); // Trigger re-render
   };
 
   return (

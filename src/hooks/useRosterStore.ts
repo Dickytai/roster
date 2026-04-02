@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GenerationState, Staff, PublicHoliday, OnCallSchedule } from '../lib/types';
+import { GenerationState, Staff, PublicHoliday } from '../lib/types';
 import { hongKong2026Holidays } from '../lib/holidays';
 import { generateOnCallSchedule } from '../lib/rosterAlgorithm';
 

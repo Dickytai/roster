@@ -1,5 +1,5 @@
-import { Staff, AnnualLeave, RosterEntry, OnCallSchedule, PublicHoliday } from './types';
-import { hongKong2026Holidays, isWeekend } from './holidays';
+import { Staff, AnnualLeave, RosterEntry, OnCallSchedule } from './types';
+import { hongKong2026Holidays } from './holidays';
 import { eachDayOfInterval, parseISO, format, differenceInDays, getDay } from 'date-fns';
 
 interface ScoreContext {
@@ -46,13 +46,13 @@ export function generateOnCallSchedule(year: number, staff: Staff[]): OnCallSche
   assignPHWeekends(phWeekendDays, staff, staffContexts, entries);
 
   // Phase 2: Assign AL days (before/after PH blocks)
-  assignALDays(entries, staff, staffContexts);
+  assignALDays(entries, staff);
 
   // Phase 3: Fill remaining days with balanced distribution
   fillRemainingDays(entries, staff, staffContexts);
 
   // Phase 4: Mark consecutive on-call sequences
-  markConsecutiveOnCall(entries, staff);
+  markConsecutiveOnCall(entries);
 
   // Calculate PH weekends count per staff
   const phWeekendsCount: Record<string, number> = {};
@@ -92,8 +92,7 @@ function assignPHWeekends(
   staffContexts: Map<string, ScoreContext>,
   entries: RosterEntry[]
 ) {
-  // Phase 1: Distribute PH weekends evenly - target = total_ph_days * 3 / n_staff
-  const targetPHWeekends = Math.ceil(phWeekendDays.length * 3 / staff.length);
+  // Phase 1: Distribute PH weekends evenly
   const phWeekendAssignments = new Map<string, number>();
 
   // First pass: assign PH weekends to staff with fewer assignments
@@ -117,8 +116,7 @@ function assignPHWeekends(
 
 function assignALDays(
   entries: RosterEntry[],
-  staff: Staff[],
-  staffContexts: Map<string, ScoreContext>
+  staff: Staff[]
 ) {
   // Phase 2: Staff on AL during PH should not be on-call
   // Staff with AL blocks adjacent to PH get priority for PH on-call
@@ -182,7 +180,7 @@ function calculateScore(
   return score;
 }
 
-function markConsecutiveOnCall(entries: RosterEntry[], staff: Staff[]) {
+function markConsecutiveOnCall(entries: RosterEntry[]) {
   // Phase 4: Mark consecutive on-call sequences
   // 5 scenarios to track
   for (let i = 1; i < entries.length; i++) {

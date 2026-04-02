@@ -1,5 +1,3 @@
-import { GenerationState } from '../lib/types';
-
 interface StepWizardProps {
   currentStep: 1 | 2 | 3;
   onStepClick: (step: 1 | 2 | 3) => void;
