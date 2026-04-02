@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { OnCallSchedule } from '../lib/types';
 import { parseISO } from 'date-fns';
-import { generateExcel } from '../lib/excelGenerator';
+import { generatePdf } from '../lib/pdfGenerator';
 
 interface Step3PreviewProps {
   schedule: OnCallSchedule;
@@ -15,14 +15,32 @@ export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
   const handleDownloadExcel = async () => {
     setDownloading('excel');
     try {
-      const buffer = generateExcel(schedule);
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const response = await fetch('/api/download/excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule }),
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `roster-${schedule.year}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Excel download failed:', err);
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    setDownloading('pdf');
+    try {
+      generatePdf(schedule);
+    } catch (err) {
+      console.error('PDF download failed:', err);
     } finally {
       setDownloading(null);
     }
@@ -107,7 +125,7 @@ export function Step3Preview({ schedule, onBack, onReset }: Step3PreviewProps) {
           {downloading === 'excel' ? 'Generating...' : 'Download Excel'}
         </button>
         <button
-          onClick={() => setDownloading('pdf')}
+          onClick={handleDownloadPdf}
           disabled={downloading !== null}
           className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
         >

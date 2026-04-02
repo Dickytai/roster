@@ -9,12 +9,15 @@
   },
   "dependencies": {
     "date-fns": "^2.30.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "pdfmake": "^0.2.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/pdfmake": "^0.3.2",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vercel/node": "^5.6.24",
