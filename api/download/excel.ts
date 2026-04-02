@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import * as XLSX from 'xlsx';
-import { format, parseISO, eachDayOfInterval, getDay, startOfMonth, endOfMonth } from 'date-fns';
+import { format, eachDayOfInterval, getDay, startOfMonth, endOfMonth } from 'date-fns';
 
 interface FlatEntry {
   date: string;

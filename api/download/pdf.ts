@@ -3,7 +3,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import pdfMake from 'pdfmake/build/pdfmake';
 // @ts-ignore
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 
 interface FlatEntry {
   date: string;
