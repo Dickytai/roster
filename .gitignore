@@ -1,0 +1,8 @@
+# Git worktrees
+.worktrees/
+
+# OS
+.DS_Store
+
+# Environment
+.env
